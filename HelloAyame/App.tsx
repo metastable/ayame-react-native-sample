@@ -1,5 +1,13 @@
 import React, {useEffect, useState} from 'react';
-import {StyleSheet, View, PermissionsAndroid, Platform} from 'react-native';
+import {
+  StyleSheet,
+  View,
+  PermissionsAndroid,
+  Platform,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from 'react-native';
 
 import {Button, TextInput} from 'react-native-paper';
 
@@ -70,121 +78,113 @@ const App: () => React.ReactNode = () => {
 
   return (
     <View style={styles.body}>
-      <View style={styles.div_content}>
-        <View style={styles.div_header}>
-          <RTCVideoView
-            style={styles.videoview}
-            track={sender ? sender.track : null}
-            objectFit={objectFit}
-          />
-        </View>
-        <View style={styles.div_header}>
-          <RTCVideoView
-            style={styles.videoview}
-            track={receiver ? receiver.track : null}
-            objectFit={objectFit}
-          />
-        </View>
-        <View style={{flex: 1, flexDirection: 'column'}}>
-          <TextInput
-            label="ルームID"
-            mode="outlined"
-            style={{
-              width: '100%',
-              height: 50,
-              borderColor: 'gray',
-            }}
-            onChangeText={setRoomId}
-            value={roomId}
-            placeholder="Room ID"
-          />
-          <TextInput
-            label="クライアントID"
-            mode="outlined"
-            style={{
-              width: '100%',
-              height: 50,
-              borderColor: 'gray',
-            }}
-            onChangeText={setClientId}
-            value={clientId}
-            placeholder="Client ID"
-          />
-          <TextInput
-            label="シグナリングキー"
-            mode="outlined"
-            style={{
-              width: '100%',
-              height: 50,
-              minWidth: '50%',
-              borderColor: 'gray',
-            }}
-            onChangeText={setSignalingKey}
-            value={signalingKey}
-            placeholder="Signaling Key"
-          />
-        </View>
-        <View style={styles.button_container}>
-          <Button
-            disabled={conn !== null}
-            mode="outlined"
-            onPress={() => {
-              const conn = new Ayame(
-                signalingUrl,
-                roomId,
-                clientId,
-                signalingKey,
-              );
-              conn.ondisconnect = function() {
-                setConn(null);
-                setSender(null);
-                setReceiver(null);
-              };
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.div_content}>
+          <View style={styles.div_header}>
+            <RTCVideoView
+              style={styles.videoview}
+              track={sender ? sender.track : null}
+              objectFit={objectFit}
+            />
+          </View>
+          <View style={styles.div_header}>
+            <RTCVideoView
+              style={styles.videoview}
+              track={receiver ? receiver.track : null}
+              objectFit={objectFit}
+            />
+          </View>
+          <KeyboardAvoidingView
+            style={{flex: 0.9, flexDirection: 'column'}}
+            behavior={'position'}>
+            <TextInput
+              label="ルームID"
+              mode="outlined"
+              style={styles.text_input}
+              onChangeText={setRoomId}
+              value={roomId}
+              placeholder="Room ID"
+            />
+            <TextInput
+              label="クライアントID"
+              mode="outlined"
+              style={styles.text_input}
+              onChangeText={setClientId}
+              value={clientId}
+              placeholder="Client ID"
+            />
+            <TextInput
+              label="シグナリングキー"
+              mode="outlined"
+              style={styles.text_input}
+              onChangeText={setSignalingKey}
+              value={signalingKey}
+              placeholder="Signaling Key"
+            />
+          </KeyboardAvoidingView>
+          <View style={styles.button_container}>
+            <Button
+              disabled={conn !== null}
+              style={styles.button}
+              mode="outlined"
+              onPress={() => {
+                const conn = new Ayame(
+                  signalingUrl,
+                  roomId,
+                  clientId,
+                  signalingKey,
+                );
+                conn.ondisconnect = function() {
+                  setConn(null);
+                  setSender(null);
+                  setReceiver(null);
+                };
 
-              conn.onconnectionstatechange = function(event: {
-                target: {connectionState: string};
-              }) {
-                logger.log('#conection state channged', event);
-                if (event.target.connectionState === 'connected') {
-                  const receiver = conn._pc.receivers.find(
-                    (each: RTCRtpReceiver) => {
+                conn.onconnectionstatechange = function(event: any) {
+                  logger.log('#conection state channged', event);
+                  if (event.target.connectionState == 'connected') {
+                    const receiver = conn._pc.receivers.find((each: any) => {
                       return each.track.kind === 'video';
-                    },
-                  );
-                  if (receiver) {
-                    logger.log('# receiver connection connected =>', receiver);
-                  } else {
-                    setReceiver(null);
+                    });
+                    if (receiver) {
+                      logger.log(
+                        '# receiver connection connected =>',
+                        receiver,
+                      );
+                    } else {
+                      setReceiver(null);
+                    }
+                    var sender = conn._pc.senders.find((each: any) => {
+                      return each.track.kind === 'video';
+                    });
+                    if (sender) {
+                      logger.log('# sender connection connected =>', sender);
+                    } else {
+                      setSender(null);
+                    }
+                    setReceiver(receiver);
+                    setSender(sender);
                   }
-                  var sender = conn._pc.senders.find((each: RTCRtpSender) => {
-                    return each.track.kind === 'video';
-                  });
-                  if (sender) {
-                    logger.log('# sender connection connected =>', sender);
-                  } else {
-                    setSender(null);
-                  }
-                  setReceiver(receiver);
-                  setSender(sender);
+                };
+                conn.connect();
+                setConn(conn);
+              }}>
+              接続
+            </Button>
+            <Button
+              mode="outlined"
+              style={styles.button}
+              disabled={conn === null}
+              onPress={() => {
+                if (conn) {
+                  conn.disconnect();
                 }
-              };
-              conn.connect();
-              setConn(conn);
-            }}>
-            接続
-          </Button>
-          <Button
-            mode="outlined"
-            disabled={!conn}
-            onPress={() => {
-              if (conn) {
-                conn.disconnect();
-              }
-            }}>
-            接続解除
-          </Button>
+              }}>
+              接続解除
+            </Button>
+          </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </View>
   );
 };
@@ -198,7 +198,9 @@ const styles = StyleSheet.create({
     padding: 30,
   },
   div_header: {
-    width: '100%',
+    maxWidth: '100%',
+    minWidth: '60%',
+    maxHeight: '30%',
     aspectRatio: 16.0 / 9.0,
     backgroundColor: 'black',
     elevation: 4,
@@ -217,8 +219,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'lightgray',
   },
   button_container: {
-    height: 50,
+    height: 80,
     flexDirection: 'row',
+  },
+  button: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '40%',
+    margin: 10,
+  },
+  text_input: {
+    width: '100%',
+    height: 50,
+    minWidth: '50%',
+    borderColor: 'gray',
+    marginTop: 10,
+    marginBottom: 10,
   },
 });
 
