@@ -225,7 +225,11 @@ export class Ayame extends AyameEventTarget {
             this.configuration.iceServers = iceServers;
           }
           if (!this._pc) this._pc = await this._createPeerConnection();
-          if (signal.isExistClient) await this._sendOffer();
+          if (signal.isExistClient) {
+            const dataChannelInit = { ordered: true };
+            this._addDataChannel('test', dataChannelInit);
+            await this._sendOffer();
+          }
           break;
         case AyameSignalingType.REJECT:
           logger.log('# Ayame: rejected', signal);
@@ -234,8 +238,6 @@ export class Ayame extends AyameEventTarget {
         case AyameSignalingType.ANSWER:
           logger.log('# Ayame: answer set remote description => ', signal);
           await this._setAnswer(signal);
-          const dataChannelInit = { ordered: true};
-          this._addDataChannel('test', dataChannelInit);
           break;
         case AyameSignalingType.OFFER:
           await this._setOffer(signal);
