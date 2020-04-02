@@ -10,6 +10,7 @@ import {
   RTCMediaStreamConstraints,
   RTCPeerConnection,
   RTCSessionDescription,
+  RTCDataChannelInit,
   getUserMedia,
   stopUserMedia,
   // react-native-webrtc-kit には TypeScript の型定義が用意されていないため、@ts-ignore で握りつぶしています。
@@ -233,6 +234,8 @@ export class Ayame extends AyameEventTarget {
         case AyameSignalingType.ANSWER:
           logger.log('# Ayame: answer set remote description => ', signal);
           await this._setAnswer(signal);
+          const dataChannelInit = { ordered: true};
+          this._addDataChannel('test', dataChannelInit);
           break;
         case AyameSignalingType.OFFER:
           await this._setOffer(signal);
@@ -371,6 +374,14 @@ export class Ayame extends AyameEventTarget {
         // TODO(kdxu): ice candidate の追加に失敗するときがあるので調べる
       }
     }
+  }
+
+  _addDataChannel(label: string, options: RTCDataChannelInit) {
+    logger.log('# Ayame: add data channel =>', label);
+    if (!this._pc) {
+      return;
+    }
+    this._pc.createDataChannel(label, options)
   }
 
   _sendSdp(sessionDescription: AyameSignalingMessage) {
